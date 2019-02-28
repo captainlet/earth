@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,shrink-to-fit=no,user-scalable=no"> -->
+	<script src="./aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-star-system-component@1.0.0/index.js"></script>
+    <script src="https://unpkg.com/aframe-html-shader@0.2.0/dist/aframe-html-shader.min.js"></script>
+
+	<!-- let's add the animation and orbit controls components -->
+	<script src="./aframe-orbit-controls.min.js"></script>
+</head>
+<body>
+	<script>
+        // a-scene：监听屏幕点击事件，启动场景动画
+        AFRAME.registerComponent('scene-starter', {
+            init: function() {
+                console.log('scene-starter', this.el);
+                this.onMouseUp = this.onMouseUp.bind(this);
+                this.el.addEventListener('click', this.onMouseUp, true)
+            },
+            onMouseUp: function(e) {
+                const sceneEl = document.querySelector('a-scene');
+                const cameraEl = document.querySelector('#camera')
+                const handImage = document.querySelector('#handImage')
+                sceneEl.removeEventListener('click', this.onMouseUp)
+                // 触发camera推进放大
+                cameraEl.emit('scene-start')
+                // 触发手闪
+                handImage.emit('scene-start')
+            }
+        });
+        // camera：监听camera放大动画完成，触发年份出现动画
+        AFRAME.registerComponent('camera-zoom-out', {
+            init: function() {
+                console.log('camera-zoom-out', this.el.components.camera);
+                this.onZoomOutAnimateComplete = this.onZoomOutAnimateComplete.bind(this);
+                this.el.addEventListener('animationcomplete', this.onZoomOutAnimateComplete)
+            },
+            onZoomOutAnimateComplete: function(e) {
+                console.log('camera-zoom-out:animationcomplete', e);
+                // 根据动画的名称区分哪个动画执行完毕
+                switch (e.detail.name) {
+                    case "animation":
+                        this.el.removeEventListener('animationcomplete', this.onZoomOutAnimateComplete)
+                        const cameraEl = document.querySelector('#camera')
+                        const year2012Text = document.querySelector('#year2012Text')
+                        const year2013Text = document.querySelector('#year2013Text')
+                        const year2014Text = document.querySelector('#year2014Text')
+                        const year2015Text = document.querySelector('#year2015Text')
+                        const year2016Text = document.querySelector('#year2016Text')
+                        const year2017Text = document.querySelector('#year2017Text')
+                        const year2018Text = document.querySelector('#year2018Text')
+                        const year2019Text = document.querySelector('#year2019Text')
+                        const year2020Text = document.querySelector('#year2020Text')
+                        const yearTriangle = document.querySelector('#yearTriangle')
+                        year2012Text.emit('event-show-text')
+                        year2013Text.emit('event-show-text')
+                        year2014Text.emit('event-show-text')
+                        year2015Text.emit('event-show-text')
+                        year2016Text.emit('event-show-text')
+                        year2017Text.emit('event-show-text')
+                        year2018Text.emit('event-show-text')
+                        year2019Text.emit('event-show-text')
+                        year2020Text.emit('event-show-text')
+                        yearTriangle.emit('event-show-text')
+                        cameraEl.setAttribute('orbit-controls', 'enableRotate', true)
+                        break;
+                    default:
+                }
+            }
+        });
+		AFRAME.registerComponent('follow-camera', {
+		  tick: function () {
+		  	// 获取camera的rotation，然后进行跟随
+		    const camera = document.querySelector('#camera')
+		    const rotation = camera.getObject3D('camera').rotation
+		    this.el.object3D.rotation.set(
+		    	rotation.x,
+				rotation.y,
+				rotation.z,
+		    )
+		  }
+		});
+		AFRAME.registerComponent('calculate-angle', {
+			init: function () {
+			    this.angle = 0;
+			    this.camera_angle = 0;
+			    this.year = 2012;
+			    this.lastdiff = 0;
+                this.lastyear = this.year;
+                this.onYearChange = this.onYearChange.bind(this);
+                this.el.addEventListener('year-change', this.onYearChange)
+                const yearText = document.querySelector('#year2012Text')
+                const yearTriangle = document.querySelector('#yearTriangle')
+                yearText.emit('event-year-select')
+                yearTriangle.emit(this.year);
+			},
+		  	tick: function () {
+			    const sceneEl = document.querySelector('a-scene');
+			    const camera = sceneEl.querySelector('#camera')
+
+			    let factor = 180 / Math.PI
+			    let diff = 0
+			    let p0 = new THREE.Vector3
+			    let p1 = new THREE.Vector3
+				this.el.object3D.getWorldPosition(p0);
+
+			    if (p0.x >= 0 && p0.z > 0) {
+			    	this.angle = Math.atan( p0.x / p0.z) * factor
+			    } else if (p0.x > 0 && p0.z <= 0) {
+			    	this.angle = 90 - Math.atan(p0.z / p0.x) * factor
+			    } else if (p0.x <= 0 && p0.z < 0) {
+			    	this.angle = 180 + Math.atan(p0.x / p0.z) * factor
+		    	} else {
+			    	this.angle = 270-Math.atan(p0.z/p0.x) * factor
+		    	}
+
+				camera.getObject3D('camera').getWorldPosition(p1);
+			    if (p1.x >= 0 && p1.z > 0) {
+			    	this.camera_angle = Math.atan(p1.x/p1.z) * factor
+			    } else if (p1.x > 0 && p1.z <= 0) {
+			    	this.camera_angle = 90 - Math.atan(p1.z/p1.x) * factor
+			    } else if (p1.x <= 0 && p1.z < 0) {
+			    	this.camera_angle = 180 + Math.atan(p1.x/p1.z) * factor
+		    	} else {
+			    	this.camera_angle = 270 - Math.atan(p1.z/p1.x) * factor
+		    	}
+
+	    		diff = this.angle + 165
+	    		if (diff > 360) {
+	    			diff = diff - 360
+	    		}
+	    		diff = this.camera_angle - diff
+	    		if (diff < 0) {
+	    			diff = diff + 360
+	    		}
+				if (this.lastdiff > 330 && diff < 30) {
+					this.year -= 1
+				}
+				if (this.lastdiff < 30  && diff > 330) {
+					this.year += 1
+				}
+	    		this.lastdiff = diff
+                if (this.lastyear != this.year) {
+                    this.lastyear = this.year
+                    this.el.emit('year-change', this.year)
+                }
+
+       //          console.log('year', this.year)
+       //          console.log('diff', Math.round(diff))
+		    	// // moveText.setAttribute('value', Math.round(diff))
+		    	// yearText.setAttribute('value', this.year)
+		  	},
+            onYearChange: function(e) {
+                console.log('calculate-angle:onYearChange', e);
+                var yearText = []
+                var yearAnimate = []
+                yearText[2012] = document.querySelector('#year2012Text')
+                yearText[2013] = document.querySelector('#year2013Text')
+                yearText[2014] = document.querySelector('#year2014Text')
+                yearText[2015] = document.querySelector('#year2015Text')
+                yearText[2016] = document.querySelector('#year2016Text')
+                yearText[2017] = document.querySelector('#year2017Text')
+                yearText[2018] = document.querySelector('#year2018Text')
+                yearText[2019] = document.querySelector('#year2019Text')
+                yearText[2020] = document.querySelector('#year2020Text')
+                const yearTriangle = document.querySelector('#yearTriangle')
+
+                yearAnimate[2012] = 'event-year-2012'
+                yearAnimate[2013] = 'event-year-2013'
+                yearAnimate[2014] = 'event-year-2014'
+                yearAnimate[2015] = 'event-year-2015'
+                yearAnimate[2016] = 'event-year-2016'
+                yearAnimate[2017] = 'event-year-2017'
+                yearAnimate[2018] = 'event-year-2018'
+                yearAnimate[2019] = 'event-year-2019'
+                yearAnimate[2020] = 'event-year-2020'
+
+                if (e.detail < 2012 || e.detail > 2020) {
+                    yearTriangle.setAttribute('opacity', 0)
+                } else {
+                    let opacity = yearText[e.detail].getAttribute('opacity')
+                    if (opacity > 0) {
+                        yearTriangle.setAttribute('opacity', 1)
+                    }
+                }
+                yearText.forEach(function(currentValue, index, arr) {
+                    if (index == e.detail) {
+                        currentValue.emit('event-year-select')
+                        yearTriangle.emit(yearAnimate[index]);
+                    } else {
+                        currentValue.emit('event-year-unselect')
+                        currentValue.setAttribute('color', '#ccc')
+                        currentValue.setAttribute('scale', '1.5 1.5 1.5')
+                    }
+                }, this)
+            }
+		});
+        // AFRAME.registerComponent('play-on-window-click', {
+        //   init: function () {
+        //     this.onClick = this.onClick.bind(this);
+        //   },
+        //   play: function () {
+        //     window.addEventListener('click', this.onClick);
+        //   },
+        //   pause: function () {
+        //     window.removeEventListener('click', this.onClick);
+        //   },
+        //   onClick: function (evt) {
+        //     var video = this.el.components.material.material.map.image;
+        //     if (!video) { return; }
+        //     video.play();
+        //   }
+        // });
+	</script>
+	<a-scene scene-starter loading-screen="backgroundColor: black" vr-mode-ui="enabled: false">
+
+        <!-- This is a "mixin" we can apply to planets to make them rotate-->
+        <a-mixin id="rotation" animation="property: rotation; loop: true; from: 0 0 0; to: 0 360 0; dur: 20000; easing: linear;"></a-mixin>
+
+        <!-- here is a "mixin" that we can apply to a container to make the planet inside it orbit -->
+        <a-mixin id="orbit" animation="property: rotation; loop: true; to: 0 360 0; dur: 40000; easing: linear;"></a-mixin>
+
+		<a-assets>
+            <img id="hand-texture" src="images/hand.png">
+			<img id="earth-texture" src="images/earth.jpg">
+            <img id="moon-texture" src="images/moon.png">
+            <img id="cloud-texture" src="images/earth_cloud.png">
+		</a-assets>
+
+		<!-- Give some basic lighting here. Ambient lighting lights the whole scene and makes sure we can still see our rings. -->
+        <a-entity id="basic-light" light="type: ambient; color: #BBB"></a-entity>
+
+        <!--use our new orbit-controls-->
+        <a-entity
+            id="camera"
+            camera
+            orbit-controls="target: 0 0 0; minDistance: 32; maxDistance: 32; maxPolarAngle: 60; minPolarAngle: 30; enablePan: false; rotateSpeed: 0.6; initialPosition: 0 19.2 25.6; enableRotate: false"
+            animation="property: camera.zoom; to: 4; dur: 4000; easing: easeInQuart; startEvents: scene-start"
+            camera-zoom-out
+            >
+        </a-entity>
+
+        <!-- 跟随在camare前面 亮黄：e7f800 蓝：5b99ff-->
+        <a-entity id="orbit-follow" follow-camera>
+            <a-triangle
+                id="yearTriangle"
+                position="-6 -4.8 5"
+                scale="0.2 0.2 0.2"
+                color="#ccc"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 5000; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__2012="property: position; to: -6 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2012"
+                animation__2013="property: position; to: -4.5 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2013"
+                animation__2014="property: position; to: -3 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2014"
+                animation__2015="property: position; to: -1.5 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2015"
+                animation__2016="property: position; to: 0 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2016"
+                animation__2017="property: position; to: 1.5 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2017"
+                animation__2018="property: position; to: 3 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2018"
+                animation__2019="property: position; to: 4.5 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2019"
+                animation__2020="property: position; to: 6 -4.8 5; dur: 500; easing: linear; startEvents: event-year-2020"
+            ></a-triangle>
+            <a-text
+                id="year2012Text"
+                value="2012年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="-6 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 500; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            >
+            </a-text>
+            <a-text
+                id="year2013Text"
+                value="2013年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="-4.5 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 1000; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2014Text"
+                value="2014年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="-3 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 1500; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2015Text"
+                value="2015年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="-1.5 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 2000; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2016Text"
+                value="2016年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="0 -4.5 5" r
+                otation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 2500; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2017Text"
+                value="2017年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="1.5 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 3000; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2018Text"
+                value="2018年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="3 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 3500; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2019Text"
+                value="2019年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="4.5 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 4000; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-text
+                id="year2020Text"
+                value="2020年"
+                font="custom-msdf.json"
+                negate="false"
+                color="#ccc"
+                align="center"
+                position="6 -4.5 5"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                opacity="0"
+                animation="property: opacity; to: 1; delay: 4500; dur: 500; easing: linear; startEvents: event-show-text"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+                animation__color="property: color; from: #ffffcc; to: #ffff66; dur: 1000; easing: linear; dir: alternate; loop: true; startEvents: event-year-select; pauseEvents: event-year-unselect"
+            ></a-text>
+            <a-image
+                id="handImage"
+                src="#hand-texture"
+                position="0 -3 20"
+                rotation="0 0 0"
+                scale="1.5 1.5 1.5"
+                transparent=true
+                opacity="1"
+                animation="property: opacity; from: 0.5; to: 1; dur: 1000; easing: linear; dir: alternate; loop: true; pauseEvents: scene-start"
+                animation__scale="property: scale; from: 1.4 1.4 1.4; to: 1.6 1.6 1.6; dur: 1000; easing: linear; dir: alternate; loop: true; pauseEvents: scene-start"
+                animation__opacity="property: opacity; to: 0; dur: 1000; easing: linear; startEvents: scene-start"
+            ></a-image>
+
+            <a-entity id="top-left-light" position="-3, 2 12" light="type: directional; color: #FFF; intensity: 0.5 castShadow: true;"></a-entity>
+            <a-entity id="left-light" position="8, -5 -9" light="type: directional; color: #BBB; intensity: 0.2 castShadow: true;"></a-entity>
+            <a-entity id="right-light" position="-8, 3 -9" light="type: directional; color: #FFF; intensity: 0.2"></a-entity>
+            <a-entity id="back-light" position="2, 0 -7" light="type: directional; color: #FFF; intensity: 0.2"></a-entity>
+        </a-entity>
+
+        <!-- <a-sky src="#sky-texture"></a-sky> -->
+        <a-sky color="#01071f"></a-sky>
+        <a-entity star-system></a-entity>
+
+        <!-- let's make the the rotate and give off light!-->
+        <a-sphere
+        	id="earth"
+        	position="0 0 0"
+            rotation="0 165 0"
+        	radius="4"
+        	segments-height="100"
+        	segments-width="100"
+        	src="#earth-texture"
+            mixin='rotation'
+            animation="startEvents: year-move"
+        ></a-sphere>
+
+        <a-sphere
+            id="cloud"
+            position="0 0 0"
+            rotation="0 165 0"
+            radius="4.2"
+            src="#cloud-texture"
+            transparent=true
+            mixin="rotation"
+            animation="dur: 160000"
+        ></a-sphere>
+
+        <a-entity id="orbit-moon" mixin="orbit" animation="dur: 20000;">
+            <a-sphere id="moon" position="-10 0 0" radius=".8" src="#moon-texture"></a-sphere>
+        </a-entity>
+
+        <!-- let's make the the rotate and give off light!-->
+        <!-- <a-sphere
+        	id="dark"
+        	position="0 0 0"
+            rotation="0 165 0"
+        	radius="4.5"
+        	src="#red1-texture"
+        	material="shader: flat;"
+        	transparent=true
+            opacity="0.8"
+            mixin="rotation"
+            animation="startEvents: year-move"
+        	animation__scale="property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dur: 1000; easing: linear; startEvents: year-move"
+        	animation__opacity="property: opacity; from: 1; to: 0; dur: 1000; easing: linear; startEvents: year-move"
+        ></a-sphere> -->
+
+
+        <!-- 与地球半径相同的轨道 -->
+		<a-entity id="orbit-earth-radius" mixin="orbit" animation="dur: 20000; startEvents: year-move">
+	        <!-- let's make the the rotate and give off light!-->
+	        <a-entity id="year-start-point" position="0 3 4" calculate-angle></a-entity>
+        </a-entity>
+
+        <a-sound></a-sound>
+	</a-scene>
+</body>
+</html>
